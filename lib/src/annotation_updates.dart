@@ -10,41 +10,33 @@ part of apple_maps_flutter;
 class _AnnotationUpdates {
   /// Computes [_AnnotationUpdates] given previous and current [Annotation]s.
   _AnnotationUpdates.from(Set<Annotation>? previous, Set<Annotation>? current) {
-    if (previous == null) {
-      previous = Set<Annotation>.identity();
-    }
+    // Initialize previous and current to empty sets if they are null
+    previous ??= <Annotation>{};
+    current ??= <Annotation>{};
 
-    if (current == null) {
-      current = Set<Annotation>.identity();
-    }
+    final Map<AnnotationId, Annotation> previousAnnotations = _keyByAnnotationId(previous);
+    final Map<AnnotationId, Annotation> currentAnnotations = _keyByAnnotationId(current);
 
-    final Map<AnnotationId, Annotation> previousAnnotations =
-        _keyByAnnotationId(previous);
-    final Map<AnnotationId, Annotation> currentAnnotations =
-        _keyByAnnotationId(current);
-
-    final Set<AnnotationId> prevAnnotationIds =
-        previousAnnotations.keys.toSet();
-    final Set<AnnotationId> currentAnnotationIds =
-        currentAnnotations.keys.toSet();
+    final Set<AnnotationId> prevAnnotationIds = previousAnnotations.keys.toSet();
+    final Set<AnnotationId> currentAnnotationIds = currentAnnotations.keys.toSet();
 
     Annotation idToCurrentAnnotation(AnnotationId id) {
       return currentAnnotations[id]!;
     }
 
-    final Set<AnnotationId> _annotationIdsToRemove =
-        prevAnnotationIds.difference(currentAnnotationIds);
-
-    final Set<Annotation> _annotationsToAdd = currentAnnotationIds
-        .difference(prevAnnotationIds)
-        .map(idToCurrentAnnotation)
-        .toSet();
-
+    final Set<AnnotationId> _annotationIdsToRemove = prevAnnotationIds.difference(currentAnnotationIds);
+    final Set<Annotation> _annotationsToAdd = currentAnnotationIds.difference(prevAnnotationIds).map(idToCurrentAnnotation).toSet();
     final Set<Annotation> _annotationsToChange = currentAnnotationIds
         .intersection(prevAnnotationIds)
-        .map(idToCurrentAnnotation)
+        .map((id) {
+          final currentAnnotation = currentAnnotations[id]!;
+          final previousAnnotation = previousAnnotations[id]!;
+          return currentAnnotation != previousAnnotation ? currentAnnotation : null;
+        })
+        .whereType<Annotation>()
         .toSet();
 
+    // Ensure fields are initialized
     annotationsToAdd = _annotationsToAdd;
     annotationIdsToRemove = _annotationIdsToRemove;
     annotationsToChange = _annotationsToChange;
@@ -64,13 +56,8 @@ class _AnnotationUpdates {
     }
 
     addIfNonNull('annotationsToAdd', _serializeAnnotationSet(annotationsToAdd));
-    addIfNonNull(
-        'annotationsToChange', _serializeAnnotationSet(annotationsToChange));
-    addIfNonNull(
-        'annotationIdsToRemove',
-        annotationIdsToRemove
-            .map<dynamic>((AnnotationId m) => m.value)
-            .toList());
+    addIfNonNull('annotationsToChange', _serializeAnnotationSet(annotationsToChange));
+    addIfNonNull('annotationIdsToRemove', annotationIdsToRemove.map<dynamic>((AnnotationId m) => m.value).toList());
 
     return updateMap;
   }
@@ -86,8 +73,7 @@ class _AnnotationUpdates {
   }
 
   @override
-  int get hashCode =>
-      hashValues(annotationsToAdd, annotationIdsToRemove, annotationsToChange);
+  int get hashCode => hashValues(annotationsToAdd, annotationIdsToRemove, annotationsToChange);
 
   @override
   String toString() {

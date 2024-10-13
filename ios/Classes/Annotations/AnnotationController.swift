@@ -9,6 +9,22 @@ import Foundation
 import MapKit
 
 extension AppleMapController: AnnotationDelegate {
+    
+    public func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, didChange newState: MKAnnotationView.DragState, fromOldState oldState: MKAnnotationView.DragState) {
+          if let flutterAnnotation = view.annotation as? FlutterAnnotation {
+              switch newState {
+              case .ending, .canceling:
+                  view.dragState = .none
+                  flutterAnnotation.coordinate = view.annotation?.coordinate ?? flutterAnnotation.coordinate
+                  // Invoke the Flutter method "annotation#onDragEnd"
+                  let coordinate = flutterAnnotation.coordinate
+           
+                  self.channel.invokeMethod("annotation#onDragEnd", arguments: ["annotationId": flutterAnnotation.id!, "position": [coordinate.latitude,coordinate.longitude]])
+              default:
+                  break
+              }
+          }
+      }
 
     public func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView)  {
         if let annotation: FlutterAnnotation = view.annotation as? FlutterAnnotation  {
@@ -59,10 +75,15 @@ extension AppleMapController: AnnotationDelegate {
         annotationView!.annotation = annotation
         // If annotation is not visible set alpha to 0 and don't let the user interact with it
         if !annotation.isVisible! {
-            annotationView!.canShowCallout = false
-            annotationView!.alpha = CGFloat(0.0)
-            annotationView!.isDraggable = false
-            return annotationView! as! FlutterAnnotationView
+            
+
+            UIView.animate(withDuration: 0.32) {
+                annotationView!.canShowCallout = false
+                annotationView!.alpha = CGFloat(0.0)
+                annotationView!.isDraggable = false
+            }
+
+            return annotationView!
         }
         if annotation.icon.iconType != .MARKER {
             self.initInfoWindow(annotation: annotation, annotationView: annotationView!)
@@ -117,7 +138,9 @@ extension AppleMapController: AnnotationDelegate {
 
     func onAnnotationClick(annotation: MKAnnotation) {
         if let flutterAnnotation: FlutterAnnotation = annotation as? FlutterAnnotation {
-            flutterAnnotation.wasDragged = true
+            if(flutterAnnotation.isDraggable ?? true) {
+                flutterAnnotation.wasDragged = true
+            }
             channel.invokeMethod("annotation#onTap", arguments: ["annotationId" : flutterAnnotation.id])
         }
     }
@@ -204,24 +227,38 @@ extension AppleMapController: AnnotationDelegate {
         self.mapView.addAnnotation(annotation)
     }
 
-    private func updateAnnotation(annotation: FlutterAnnotation) {
-        if let oldAnnotation = self.getAnnotation(with: annotation.id) {
-            UIView.animate(withDuration: 0.32, animations: {
-                oldAnnotation.coordinate = annotation.coordinate
-                oldAnnotation.zIndex = annotation.zIndex
-                oldAnnotation.anchor = annotation.anchor
-                oldAnnotation.alpha = annotation.alpha
-                oldAnnotation.isVisible = annotation.isVisible
-                oldAnnotation.title = annotation.title
-                oldAnnotation.subtitle = annotation.subtitle
-            })
-            
-            // Update the annotation view with the new image
-            if let view = self.mapView.view(for: oldAnnotation) {
-                let newAnnotationView = getAnnotationView(annotation: annotation)
-                view.image = newAnnotationView.image
-            }
+     private func updateAnnotation(annotation: FlutterAnnotation) {
+        guard let oldAnnotation = self.getAnnotation(with: annotation.id) else {
+            print("flutter: No existing annotation found for id: \(annotation.id)")
+            return
         }
+        
+         // Refresh the annotation view
+         if let view = self.mapView.view(for: oldAnnotation) {
+
+             UIView.animate(withDuration: 0.32) {
+                 oldAnnotation.coordinate = annotation.coordinate
+                 oldAnnotation.zIndex = annotation.zIndex
+                 oldAnnotation.anchor = annotation.anchor
+                 oldAnnotation.alpha = annotation.alpha
+                 oldAnnotation.isVisible = annotation.isVisible
+                 oldAnnotation.title = annotation.title
+                 oldAnnotation.subtitle = annotation.subtitle
+                 oldAnnotation.image = annotation.image
+                 oldAnnotation.icon = annotation.icon
+             }
+             let newAnnotationView = getAnnotationView(annotation: annotation)
+             UIView.animate(withDuration: 0.32) {
+                 view.alpha = (annotation.isVisible ?? true) ? CGFloat(annotation.alpha ?? 1.0) : 0
+                 view.isHidden = !(annotation.isVisible ?? true)
+                 view.image = newAnnotationView.image
+                 view.detailCalloutAccessoryView = newAnnotationView.detailCalloutAccessoryView
+                 view.isDraggable = newAnnotationView.isDraggable
+                 // Update other view properties if needed
+             }
+         } else {
+             print("flutterNo view found for annotation id: \(annotation.id)")
+         }
     }
 
     private func getNextAnnotationZIndex() -> Double {
