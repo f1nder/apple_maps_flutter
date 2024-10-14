@@ -82,14 +82,11 @@ class InfoWindow {
     if (identical(this, other)) return true;
     if (other is! InfoWindow) return false;
     final InfoWindow typedOther = other;
-    return title == typedOther.title &&
-        snippet == typedOther.snippet &&
-        anchor == typedOther.anchor &&
-        onTap == typedOther.onTap;
+    return title == typedOther.title && snippet == typedOther.snippet && anchor == typedOther.anchor && onTap == typedOther.onTap;
   }
 
   @override
-  int get hashCode => hashValues(title.hashCode, snippet, anchor);
+  int get hashCode => Object.hash(title.hashCode, snippet, anchor);
 
   @override
   String toString() {
@@ -279,22 +276,17 @@ class Annotation {
   }
 }
 
-Map<AnnotationId, Annotation> _keyByAnnotationId(
-    Iterable<Annotation>? annotations) {
+Map<AnnotationId, Annotation> _keyByAnnotationId(Iterable<Annotation>? annotations) {
   if (annotations == null) {
     return <AnnotationId, Annotation>{};
   }
-  return Map<AnnotationId, Annotation>.fromEntries(annotations.map(
-      (Annotation annotation) => MapEntry<AnnotationId, Annotation>(
-          annotation.annotationId, annotation)));
+  return Map<AnnotationId, Annotation>.fromEntries(
+      annotations.map((Annotation annotation) => MapEntry<AnnotationId, Annotation>(annotation.annotationId, annotation)));
 }
 
-List<Map<String, dynamic>>? _serializeAnnotationSet(
-    Set<Annotation>? annotations) {
+List<Map<String, dynamic>>? _serializeAnnotationSet(Set<Annotation>? annotations) {
   if (annotations == null) {
     return null;
   }
-  return annotations
-      .map<Map<String, dynamic>>((Annotation m) => m._toJson())
-      .toList();
+  return annotations.map<Map<String, dynamic>>((Annotation m) => m._toJson()).toList();
 }
