@@ -28,13 +28,9 @@ class _CircleUpdates {
       return currentCircles[id]!;
     }
 
-    final Set<CircleId> _circleIdsToRemove =
-        prevCircleIds.difference(currentCircleIds);
+    final Set<CircleId> _circleIdsToRemove = prevCircleIds.difference(currentCircleIds);
 
-    final Set<Circle> _circlesToAdd = currentCircleIds
-        .difference(prevCircleIds)
-        .map(idToCurrentCircle)
-        .toSet();
+    final Set<Circle> _circlesToAdd = currentCircleIds.difference(prevCircleIds).map(idToCurrentCircle).toSet();
 
     /// Returns `true` if [current] is not equals to previous one with the
     /// same id.
@@ -43,11 +39,7 @@ class _CircleUpdates {
       return current != previous;
     }
 
-    final Set<Circle> _circlesToChange = currentCircleIds
-        .intersection(prevCircleIds)
-        .map(idToCurrentCircle)
-        .where(hasChanged)
-        .toSet();
+    final Set<Circle> _circlesToChange = currentCircleIds.intersection(prevCircleIds).map(idToCurrentCircle).where(hasChanged).toSet();
 
     circlesToAdd = _circlesToAdd;
     circleIdsToRemove = _circleIdsToRemove;
@@ -69,8 +61,7 @@ class _CircleUpdates {
 
     addIfNonNull('circlesToAdd', _serializeCircleSet(circlesToAdd));
     addIfNonNull('circlesToChange', _serializeCircleSet(circlesToChange));
-    addIfNonNull('circleIdsToRemove',
-        circleIdsToRemove.map<dynamic>((CircleId m) => m.value).toList());
+    addIfNonNull('circleIdsToRemove', circleIdsToRemove.map<dynamic>((CircleId m) => m.value).toList());
 
     return updateMap;
   }
@@ -86,8 +77,7 @@ class _CircleUpdates {
   }
 
   @override
-  int get hashCode =>
-      hashValues(circlesToAdd, circleIdsToRemove, circlesToChange);
+  int get hashCode => Object.hash(circlesToAdd, circleIdsToRemove, circlesToChange);
 
   @override
   String toString() {

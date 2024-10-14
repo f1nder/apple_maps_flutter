@@ -66,18 +66,14 @@ class CameraPosition {
     if (identical(this, other)) return true;
     if (runtimeType != other.runtimeType) return false;
     final CameraPosition typedOther = other;
-    return heading == typedOther.heading &&
-        target == typedOther.target &&
-        pitch == typedOther.pitch &&
-        zoom == typedOther.zoom;
+    return heading == typedOther.heading && target == typedOther.target && pitch == typedOther.pitch && zoom == typedOther.zoom;
   }
 
   @override
-  int get hashCode => hashValues(heading, target, pitch, zoom);
+  int get hashCode => Object.hash(heading, target, pitch, zoom);
 
   @override
-  String toString() =>
-      'CameraPosition(bearing: $heading, target: $target, tilt: $pitch, zoom: $zoom)';
+  String toString() => 'CameraPosition(bearing: $heading, target: $target, tilt: $pitch, zoom: $zoom)';
 }
 
 /// Defines a camera move, supporting absolute moves as well as moves relative

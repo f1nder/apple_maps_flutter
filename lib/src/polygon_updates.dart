@@ -28,13 +28,9 @@ class _PolygonUpdates {
       return currentPolygons[id]!;
     }
 
-    final Set<PolygonId> _polygonIdsToRemove =
-        prevPolygonIds.difference(currentPolygonIds);
+    final Set<PolygonId> _polygonIdsToRemove = prevPolygonIds.difference(currentPolygonIds);
 
-    final Set<Polygon> _polygonsToAdd = currentPolygonIds
-        .difference(prevPolygonIds)
-        .map(idToCurrentPolygon)
-        .toSet();
+    final Set<Polygon> _polygonsToAdd = currentPolygonIds.difference(prevPolygonIds).map(idToCurrentPolygon).toSet();
 
     /// Returns `true` if [current] is not equals to previous one with the
     /// same id.
@@ -43,11 +39,7 @@ class _PolygonUpdates {
       return current != previous;
     }
 
-    final Set<Polygon> _polygonsToChange = currentPolygonIds
-        .intersection(prevPolygonIds)
-        .map(idToCurrentPolygon)
-        .where(hasChanged)
-        .toSet();
+    final Set<Polygon> _polygonsToChange = currentPolygonIds.intersection(prevPolygonIds).map(idToCurrentPolygon).where(hasChanged).toSet();
 
     polygonsToAdd = _polygonsToAdd;
     polygonIdsToRemove = _polygonIdsToRemove;
@@ -69,8 +61,7 @@ class _PolygonUpdates {
 
     addIfNonNull('polygonsToAdd', _serializePolygonSet(polygonsToAdd));
     addIfNonNull('polygonsToChange', _serializePolygonSet(polygonsToChange));
-    addIfNonNull('polygonIdsToRemove',
-        polygonIdsToRemove.map<dynamic>((PolygonId m) => m.value).toList());
+    addIfNonNull('polygonIdsToRemove', polygonIdsToRemove.map<dynamic>((PolygonId m) => m.value).toList());
 
     return updateMap;
   }
@@ -86,8 +77,7 @@ class _PolygonUpdates {
   }
 
   @override
-  int get hashCode =>
-      hashValues(polygonsToAdd, polygonIdsToRemove, polygonsToChange);
+  int get hashCode => Object.hash(polygonsToAdd, polygonIdsToRemove, polygonsToChange);
 
   @override
   String toString() {

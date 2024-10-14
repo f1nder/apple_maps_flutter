@@ -18,10 +18,8 @@ class _PolylineUpdates {
       current = Set<Polyline>.identity();
     }
 
-    final Map<PolylineId, Polyline> previousPolylines =
-        _keyByPolylineId(previous);
-    final Map<PolylineId, Polyline> currentPolylines =
-        _keyByPolylineId(current);
+    final Map<PolylineId, Polyline> previousPolylines = _keyByPolylineId(previous);
+    final Map<PolylineId, Polyline> currentPolylines = _keyByPolylineId(current);
 
     final Set<PolylineId> prevPolylineIds = previousPolylines.keys.toSet();
     final Set<PolylineId> currentPolylineIds = currentPolylines.keys.toSet();
@@ -30,18 +28,11 @@ class _PolylineUpdates {
       return currentPolylines[id]!;
     }
 
-    final Set<PolylineId> _polylineIdsToRemove =
-        prevPolylineIds.difference(currentPolylineIds);
+    final Set<PolylineId> _polylineIdsToRemove = prevPolylineIds.difference(currentPolylineIds);
 
-    final Set<Polyline> _polylinesToAdd = currentPolylineIds
-        .difference(prevPolylineIds)
-        .map(idToCurrentPolyline)
-        .toSet();
+    final Set<Polyline> _polylinesToAdd = currentPolylineIds.difference(prevPolylineIds).map(idToCurrentPolyline).toSet();
 
-    final Set<Polyline> _polylinesToChange = currentPolylineIds
-        .intersection(prevPolylineIds)
-        .map(idToCurrentPolyline)
-        .toSet();
+    final Set<Polyline> _polylinesToChange = currentPolylineIds.intersection(prevPolylineIds).map(idToCurrentPolyline).toSet();
 
     polylinesToAdd = _polylinesToAdd;
     polylineIdsToRemove = _polylineIdsToRemove;
@@ -63,8 +54,7 @@ class _PolylineUpdates {
 
     addIfNonNull('polylinesToAdd', _serializePolylineSet(polylinesToAdd));
     addIfNonNull('polylinesToChange', _serializePolylineSet(polylinesToChange));
-    addIfNonNull('polylineIdsToRemove',
-        polylineIdsToRemove.map<dynamic>((PolylineId m) => m.value).toList());
+    addIfNonNull('polylineIdsToRemove', polylineIdsToRemove.map<dynamic>((PolylineId m) => m.value).toList());
 
     return updateMap;
   }
@@ -80,8 +70,7 @@ class _PolylineUpdates {
   }
 
   @override
-  int get hashCode =>
-      hashValues(polylinesToAdd, polylineIdsToRemove, polylinesToChange);
+  int get hashCode => Object.hash(polylinesToAdd, polylineIdsToRemove, polylinesToChange);
 
   @override
   String toString() {
