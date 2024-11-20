@@ -40,6 +40,7 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
         self.channel = channel
         self.options = options
         initialiseTapGestureRecognizers()
+        removeBrokenGestureRecognizers()
     }
     
     var actualHeading: CLLocationDirection {
@@ -64,6 +65,7 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
             return CLLocationDirection.zero
         }
     }
+    
     
     // To calculate the displayed region we have to get the layout bounds.
     // Because the self is layed out using an auto layout we have to call
@@ -309,14 +311,18 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
     }
        
     @objc func onMapGesture(sender: UIGestureRecognizer) {
-        let locationOnMap = self.region.center // self.convert(locationInView, toCoordinateFrom: self)
+        let locationOnMap = self.region.center
         let zoom = self.calculatedZoomLevel
         let pitch = self.camera.pitch
         let heading = self.actualHeading
+        
+     
+        // Обновляем значения камеры
         self.updateCameraValues()
-        channel?.invokeMethod("camera#onMove", arguments: ["position": ["heading": heading, "target":  [locationOnMap.latitude, locationOnMap.longitude], "pitch": pitch, "zoom": zoom]])
+        
+        
+        channel?.invokeMethod("camera#onMove", arguments: ["position": ["heading": heading, "target": [locationOnMap.latitude, locationOnMap.longitude], "pitch": pitch, "zoom": zoom]])
     }
-
     @objc func longTap(sender: UIGestureRecognizer){
         if sender.state == .began {
            let locationInView = sender.location(in: self)
@@ -340,8 +346,55 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
     
     // Always allow multiple gestureRecognizers
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
-        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+                           shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+//        // Логирование информации о жестах
+//        print("gestureRecognizer: \(gestureRecognizer) - state: \(gestureRecognizer.state.rawValue)")
+//        print("otherGestureRecognizer: \(otherGestureRecognizer) - state: \(otherGestureRecognizer.state.rawValue)")
+        
         return true
+    }
+    
+    
+//    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+//        super.touchesBegan(touches, with: event)
+//      //  print("touchesBegan - touches: \(touches), event: \(String(describing: event))")
+//    }
+//
+//    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+//        super.touchesCancelled(touches, with: event)
+//      ///  print("touchesCancelled - touches: \(touches), event: \(String(describing: event))")
+//        
+//    }
+    
+    private func removeBrokenGestureRecognizers() {
+        for subview in self.subviews {
+            if let gestures = subview.gestureRecognizers {
+                for gesture in gestures {
+                    let gestureType = String(describing: type(of: gesture))
+                    // Удаляем все жесты, кроме _MKUserInteractionGestureRecognizer
+                    if gestureType == "_MKUserInteractionGestureRecognizer" {
+                        subview.removeGestureRecognizer(gesture)
+                        print("Removed gesture recognizer: \(gestureType) from subview.")
+                    } else {
+                        print("Kept gesture recognizer: \(gestureType).")
+                    }
+                }
+            }
+        }
+
+        // Также проверяем гесты самого MKMapView
+        if let gestures = self.gestureRecognizers {
+            for gesture in gestures {
+                let gestureType = String(describing: type(of: gesture))
+                // Удаляем все жесты, кроме _MKUserInteractionGestureRecognizer
+                if gestureType == "_MKUserInteractionGestureRecognizer" {
+                    self.removeGestureRecognizer(gesture)
+                    print("Removed gesture recognizer: \(gestureType) from MKMapView.")
+                } else {
+                    print("Kept gesture recognizer: \(gestureType).")
+                }
+            }
+        }
     }
     
     func distanceOfCGPoints(_ a: CGPoint, _ b: CGPoint) -> CGFloat {

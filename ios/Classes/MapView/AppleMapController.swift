@@ -105,6 +105,16 @@ public class AppleMapController: NSObject, FlutterPlatformView {
                     self.takeSnapshot(options: SnapshotOptions.init(options: args), onCompletion: { (snapshot: FlutterStandardTypedData?, error: Error?) -> Void in
                         result(snapshot ?? error)
                     })
+
+                case "map#showAnnotations":
+                    if let annotationIds = args["annotationIds"] as? [String],
+                       let animated = args["animated"] as? Bool {
+                        self.showAnnotations(annotationIds: annotationIds, animated: animated)
+                        result(nil)
+                    } else {
+                        result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid arguments for showAnnotations", details: nil))
+                    }
+                    break
                 default:
                     result(FlutterMethodNotImplemented)
                     break
@@ -275,6 +285,16 @@ public class AppleMapController: NSObject, FlutterPlatformView {
             return positionData
         }
         return [:]
+    }
+    
+    
+    private func showAnnotations(annotationIds: [String], animated: Bool) {
+        let annotations = self.mapView.annotations.compactMap { annotation -> MKAnnotation? in
+            guard let flutterAnnotation = annotation as? FlutterAnnotation,
+                  annotationIds.contains(flutterAnnotation.id) else { return nil }
+            return flutterAnnotation
+        }
+        self.mapView.showAnnotations(annotations, animated: animated)
     }
 }
 
