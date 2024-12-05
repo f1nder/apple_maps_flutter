@@ -147,6 +147,10 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
             self.mapType = self.mapTypes[mapType]
         }
         
+        if #available(iOS 13.0, *) {
+            overrideUserInterfaceStyle = .dark
+        }
+        
         if let trafficEnabled: Bool = options["trafficEnabled"] as? Bool {
             if #available(iOS 9.0, *) {
                 self.showsTraffic = trafficEnabled

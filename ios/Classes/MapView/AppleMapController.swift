@@ -296,6 +296,8 @@ public class AppleMapController: NSObject, FlutterPlatformView {
         }
         self.mapView.showAnnotations(annotations, animated: animated)
     }
+    
+   
 }
 
 

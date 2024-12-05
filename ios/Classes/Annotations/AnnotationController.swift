@@ -8,8 +8,9 @@
 import Foundation
 import MapKit
 
+
 extension AppleMapController: AnnotationDelegate {
-    
+        
     public func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, didChange newState: MKAnnotationView.DragState, fromOldState oldState: MKAnnotationView.DragState) {
           if let flutterAnnotation = view.annotation as? FlutterAnnotation {
               switch newState {
@@ -32,12 +33,13 @@ extension AppleMapController: AnnotationDelegate {
             if !annotation.selectedProgrammatically {
                 if !self.isAnnotationInFront(zIndex: annotation.zIndex) {
                     self.moveToFront(annotation: annotation)
+                   
                 }
                 self.onAnnotationClick(annotation: annotation)
             } else {
                 annotation.selectedProgrammatically = false
             }
-
+           
             if annotation.infoWindowConsumesTapEvents {
                 let tapGestureRecognizer = InfoWindowTapGestureRecognizer(target: self, action: #selector(onCalloutTapped))
                 tapGestureRecognizer.annotationId = annotation.id
@@ -123,11 +125,11 @@ extension AppleMapController: AnnotationDelegate {
             }
         }
     }
-
+    
     func annotationsIdsToRemove(annotationIds: NSArray) {
         for annotationId in annotationIds {
             if let _annotationId: String = annotationId as? String {
-                removeAnnotation(id: _annotationId)
+                removeAnnotation(id: _annotationId, withAnimate: true)
             }
         }
     }
@@ -144,6 +146,10 @@ extension AppleMapController: AnnotationDelegate {
             channel.invokeMethod("annotation#onTap", arguments: ["annotationId" : flutterAnnotation.id])
         }
     }
+    
+    @objc func onAnnotationClickGesture(with annotationId: String) {
+            channel.invokeMethod("annotation#onTap", arguments: ["annotationId" : annotationId])
+    }
 
     func selectAnnotation(with id: String) {
         if let annotation: FlutterAnnotation = self.getAnnotation(with: id) {
@@ -151,6 +157,7 @@ extension AppleMapController: AnnotationDelegate {
             self.mapView.selectAnnotation(annotation, animated: true)
         }
     }
+    
 
     func hideAnnotation(with id: String) {
         if let annotation: FlutterAnnotation = self.getAnnotation(with: id) {
@@ -163,9 +170,34 @@ extension AppleMapController: AnnotationDelegate {
     }
 
 
-    private func removeAnnotation(id: String) {
+    private func removeAnnotation(id: String, withAnimate: Bool = false) {
+        
+   
+        
         if let flutterAnnotation: FlutterAnnotation = self.getAnnotation(with: id) {
-            self.mapView.removeAnnotation(flutterAnnotation)
+            
+            if(withAnimate == false){
+                self.mapView.removeAnnotation(flutterAnnotation)
+                return
+            }
+            
+            // Find the annotation view for the given annotation
+            guard let annotationView = self.mapView.view(for: flutterAnnotation) else {
+                   // If the view isn't available, simply remove the annotation
+                   self.mapView.removeAnnotation(flutterAnnotation)
+                   return
+               }
+               
+               // Animate scaling down the annotation view
+               UIView.animate(withDuration: 0.3, animations: {
+                   annotationView.transform = CGAffineTransform(scaleX: 0.1, y: 0.1)
+                   annotationView.alpha = 0 // Optional: Fade out for a smoother effect
+               }) { _ in
+                   // Remove the annotation after the animation completes
+                   self.mapView.removeAnnotation(flutterAnnotation)
+               }
+            
+              
         }
     }
 
@@ -211,6 +243,31 @@ extension AppleMapController: AnnotationDelegate {
         let annotation: FlutterAnnotation = FlutterAnnotation(fromDictionary: annotationData, registrar: registrar)
         self.addAnnotation(annotation: annotation)
     }
+    
+    public func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
+        for annotationView in views {
+            // Save the original alpha value
+            let originalAlpha = annotationView.alpha
+
+            // Start with the annotation view fully transparent
+            annotationView.alpha = 0
+
+            // Apply a bounce animation to the transform property
+            UIView.animateKeyframes(withDuration: 0.2, delay: 0, options: [], animations: {
+                // Fade in
+                annotationView.alpha = originalAlpha
+                
+          
+                // Add bounce keyframes
+                UIView.addKeyframe(withRelativeStartTime: 0.0, relativeDuration: 0.2) {
+                    annotationView.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
+                }
+                UIView.addKeyframe(withRelativeStartTime: 0.5, relativeDuration: 0.2) {
+                    annotationView.transform = .identity
+                }
+            }, completion: nil)
+        }
+    }
 
     /**
      Checks if an Annotation with the same id exists and removes it before adding if necessary
@@ -224,41 +281,60 @@ extension AppleMapController: AnnotationDelegate {
             annotation.zIndex = self.getNextAnnotationZIndex()
             channel.invokeMethod("annotation#onZIndexChanged", arguments: ["annotationId": annotation.id!, "zIndex": annotation.zIndex])
         }
-        self.mapView.addAnnotation(annotation)
+        UIView.animate(withDuration: 0.32) {
+            self.mapView.addAnnotation(annotation)
+        }
     }
 
-     private func updateAnnotation(annotation: FlutterAnnotation) {
+    private func updateAnnotation(annotation: FlutterAnnotation) {
         guard let oldAnnotation = self.getAnnotation(with: annotation.id) else {
-            print("flutter: No existing annotation found for id: \(annotation.id)")
+            print("No existing annotation found for id: \(annotation.id)")
             return
         }
         
-         // Refresh the annotation view
-         if let view = self.mapView.view(for: oldAnnotation) {
+        // Check if zIndex has changed
+        let zIndexChanged = oldAnnotation.zIndex != annotation.zIndex
+        
+//        if zIndexChanged {
+//
+//            oldAnnotation.zIndex = annotation.zIndex
+//            // Re-add the annotation
+//           self.addAnnotation(annotation:   oldAnnotation)
+//            
+//           // self.selectAnnotation(with: oldAnnotation.id)
+//        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            // Retrieve the annotation view (after re-adding if zIndex changed)
 
-             UIView.animate(withDuration: 0.32) {
-                 oldAnnotation.coordinate = annotation.coordinate
-                 oldAnnotation.zIndex = annotation.zIndex
-                 oldAnnotation.anchor = annotation.anchor
-                 oldAnnotation.alpha = annotation.alpha
-                 oldAnnotation.isVisible = annotation.isVisible
-                 oldAnnotation.title = annotation.title
-                 oldAnnotation.subtitle = annotation.subtitle
-                 oldAnnotation.image = annotation.image
-                 oldAnnotation.icon = annotation.icon
-             }
-             let newAnnotationView = getAnnotationView(annotation: annotation)
-             UIView.animate(withDuration: 0.32) {
-                 view.alpha = (annotation.isVisible ?? true) ? CGFloat(annotation.alpha ?? 1.0) : 0
-                 view.isHidden = !(annotation.isVisible ?? true)
-                 view.image = newAnnotationView.image
-                 view.detailCalloutAccessoryView = newAnnotationView.detailCalloutAccessoryView
-                 view.isDraggable = newAnnotationView.isDraggable
-                 // Update other view properties if needed
-             }
-         } else {
-             print("flutterNo view found for annotation id: \(annotation.id)")
-         }
+            
+            // Perform the animations
+            UIView.animate(withDuration: 0.32) {
+                
+                // Update properties without removing the annotation
+                oldAnnotation.coordinate = annotation.coordinate
+                oldAnnotation.title = annotation.title
+                oldAnnotation.subtitle = annotation.subtitle
+                oldAnnotation.image = annotation.image
+                oldAnnotation.icon = annotation.icon
+                oldAnnotation.anchor = annotation.anchor
+                oldAnnotation.alpha = annotation.alpha
+                oldAnnotation.isVisible = annotation.isVisible
+                
+                
+                guard let updatedView = self.mapView.view(for: oldAnnotation) else {
+                    print("No view found for annotation id: \(annotation.id)")
+                    return
+                }
+                
+                // Update the annotation view properties
+                updatedView.alpha = (annotation.isVisible ?? true) ? CGFloat(annotation.alpha ?? 1.0) : 0
+                updatedView.isHidden = !(annotation.isVisible ?? true)
+                updatedView.image = self.getAnnotationView(annotation: annotation).image
+                updatedView.detailCalloutAccessoryView = self.getAnnotationView(annotation: annotation).detailCalloutAccessoryView
+                updatedView.isDraggable = annotation.isDraggable ?? false
+            }
+        }
     }
 
     private func getNextAnnotationZIndex() -> Double {
@@ -332,7 +408,6 @@ extension AppleMapController: AnnotationDelegate {
         annotation.zIndex = self.getNextAnnotationZIndex()
         channel.invokeMethod("annotation#onZIndexChanged", arguments: ["annotationId": id, "zIndex": annotation.zIndex])
         self.addAnnotation(annotation: annotation)
-        self.selectAnnotation(with: id)
     }
 }
 
